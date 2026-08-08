@@ -10,7 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend cross-origin requests
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+  exposedHeaders: [
+    'Content-Disposition',
+    'Content-Type',
+    'Content-Length'
+  ]
+}));
 
 // Parse requests
 app.use(express.json());
@@ -21,7 +29,21 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
+
+// Ensure audio MIME types are recognized
+express.static.mime.define({
+  'audio/webm': ['webm'],
+  'audio/ogg': ['ogg'],
+  'audio/mpeg': ['mp3'],
+  'audio/mp4': ['m4a', 'mp4'],
+});
+
 // Serve uploads statically so the frontend can retrieve mock files
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Accept-Ranges', 'bytes');
+  next();
+});
 app.use('/uploads', express.static(uploadDir));
 
 // Serve backups statically so the admin can download the SQL file directly
@@ -57,9 +79,28 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err.message);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
+  console.error('UPLOAD ERROR:', err);
+
+  if (
+    err.message &&
+    err.message.startsWith('Invalid file type')
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File size exceeds the allowed limit'
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: err.message || 'Internal server error'
   });
 });
 

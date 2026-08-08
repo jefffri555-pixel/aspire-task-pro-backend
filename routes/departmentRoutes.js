@@ -1,20 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const departmentController = require('../controllers/departmentController');
-const { authenticateJWT } = require('../middleware/authMiddleware');
-const { isAdmin } = require('../middleware/adminMiddleware');
+const { authenticateJWT, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Require authentication for all department routes
 router.use(authenticateJWT);
 
-// Publicly read, Admin-restricted write
+const canManageDept = authorizeRoles(['admin', 'super_admin', 'manager', 'managing_director']);
+
+// Publicly read, Manager/Admin-restricted write
 router.get('/', departmentController.getDepartments);
-router.post('/', isAdmin, departmentController.createDepartment);
-router.put('/:id', isAdmin, departmentController.updateDepartment);
-router.delete('/:id', isAdmin, departmentController.deleteDepartment);
+router.post('/', canManageDept, departmentController.createDepartment);
+router.put('/:id', canManageDept, departmentController.updateDepartment);
+router.patch('/:id/status', canManageDept, departmentController.toggleStatus);
+router.delete('/:id', authorizeRoles(['admin', 'super_admin']), departmentController.deleteDepartment);
 
 // Team assignments & Statistics extensions
-router.post('/:id/assign', isAdmin, departmentController.assignEmployees);
+router.post('/:id/assign', canManageDept, departmentController.assignEmployees);
 router.get('/:id/statistics', departmentController.getDepartmentStats);
 
 module.exports = router;

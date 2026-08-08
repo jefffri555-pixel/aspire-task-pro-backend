@@ -108,7 +108,12 @@ CREATE TABLE task_comments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  comment TEXT NOT NULL,
+  comment TEXT,
+  message_type VARCHAR(20) DEFAULT 'text',
+  audio_url TEXT,
+  audio_file_name TEXT,
+  audio_mime_type VARCHAR(100),
+  audio_duration_seconds INTEGER,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

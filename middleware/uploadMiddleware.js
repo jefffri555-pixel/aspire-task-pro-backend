@@ -3,10 +3,34 @@ const multer = require('multer');
 // Configure memory storage since we send files to Cloudinary/Mock API
 const storage = multer.memoryStorage();
 
+const path = require('path');
+
 // File filters to support common business attachments (docs, sheets, images, pdfs)
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
+  console.log('UPLOAD FILE DEBUG', {
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    fieldname: file.fieldname
+  });
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  const allowedExtensions = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.txt'
+  ];
+
+  const allowedMimeTypes = [
     'image/jpeg',
+    'image/jpg',
     'image/png',
     'image/gif',
     'application/pdf',
@@ -14,14 +38,30 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain'
+    'text/plain',
+    'application/octet-stream'
   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Supported types: JPEG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, TXT'), false);
+  const extensionAllowed = allowedExtensions.includes(ext);
+  const mimeAllowed =
+    allowedMimeTypes.includes(file.mimetype?.toLowerCase()) ||
+    file.mimetype === 'application/octet-stream';
+  console.log({
+    extension: ext,
+    mimeType: file.mimetype,
+    extensionAllowed,
+    mimeAllowed
+  });
+  if (extensionAllowed && mimeAllowed) {
+    return cb(null, true);
   }
+
+  return cb(
+    new Error(
+      'Invalid file type. Supported types: JPEG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX, TXT'
+    ),
+    false
+  );
 };
 
 const upload = multer({

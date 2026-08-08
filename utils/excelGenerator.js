@@ -7,8 +7,8 @@ const ExcelJS = require('exceljs');
  */
 const generateReportExcel = async (res, data) => {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Aspire Task Pro';
-  workbook.lastModifiedBy = 'Aspire Task Pro';
+  workbook.creator = 'Aspire';
+  workbook.lastModifiedBy = 'Aspire';
   workbook.created = new Date();
 
   const type = data.type || 'all';
@@ -270,6 +270,148 @@ const generateReportExcel = async (res, data) => {
   res.end();
 };
 
+const _setupExcelSheets = (workbook) => {
+  const deptSheet = workbook.addWorksheet('Department Summary');
+  deptSheet.columns = [
+    { header: 'Department', key: 'department', width: 25 },
+    { header: 'Employee Count', key: 'employee_count', width: 18 },
+    { header: 'Total Tasks', key: 'total_tasks', width: 15 },
+    { header: 'Completed Tasks', key: 'completed_tasks', width: 18 },
+    { header: 'Pending Tasks', key: 'pending_tasks', width: 15 },
+    { header: 'In Progress Tasks', key: 'in_progress_tasks', width: 18 },
+    { header: 'In Review Tasks', key: 'in_review_tasks', width: 18 },
+    { header: 'Completion Percentage', key: 'completion_percentage', width: 22 }
+  ];
+
+  const empSheet = workbook.addWorksheet('Employee Summary');
+  empSheet.columns = [
+    { header: 'Employee ID', key: 'employee_id', width: 15 },
+    { header: 'Employee Name', key: 'employee_name', width: 25 },
+    { header: 'Department', key: 'department', width: 25 },
+    { header: 'Role', key: 'role', width: 15 },
+    { header: 'Designation', key: 'designation', width: 22 },
+    { header: 'Total Tasks', key: 'total_tasks', width: 15 },
+    { header: 'Completed', key: 'completed', width: 15 },
+    { header: 'Pending', key: 'pending', width: 15 },
+    { header: 'In Progress', key: 'in_progress', width: 15 },
+    { header: 'In Review', key: 'in_review', width: 15 },
+    { header: 'Completion Percentage', key: 'completion_percentage', width: 22 }
+  ];
+
+  const taskSheet = workbook.addWorksheet('Task Details');
+  taskSheet.columns = [
+    { header: 'Department', key: 'department', width: 25 },
+    { header: 'Employee ID', key: 'employee_id', width: 15 },
+    { header: 'Employee Name', key: 'employee_name', width: 25 },
+    { header: 'Task ID', key: 'task_code', width: 15 },
+    { header: 'Task Title', key: 'title', width: 35 },
+    { header: 'Description', key: 'description', width: 40 },
+    { header: 'Priority', key: 'priority', width: 15 },
+    { header: 'Status', key: 'status', width: 18 },
+    { header: 'Assigned By', key: 'assigned_by', width: 20 },
+    { header: 'Assigned Date', key: 'assigned_date', width: 18 },
+    { header: 'Start Date', key: 'start_date', width: 18 },
+    { header: 'Due Date', key: 'due_date', width: 18 },
+    { header: 'Completed Date', key: 'completed_date', width: 18 }
+  ];
+
+  [deptSheet, empSheet, taskSheet].forEach(sheet => {
+    sheet.getRow(1).eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF082340' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: sheet.columns.length }
+    };
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+  });
+
+  return { deptSheet, empSheet, taskSheet };
+};
+
+const _populateExcelData = (sheets, data) => {
+  const { deptSheet, empSheet, taskSheet } = sheets;
+  const dept = data.department;
+  const sum = data.summary;
+
+  deptSheet.addRow({
+    department: dept.name,
+    employee_count: sum.employee_count,
+    total_tasks: sum.total_tasks,
+    completed_tasks: sum.completed_tasks,
+    pending_tasks: sum.pending_tasks,
+    in_progress_tasks: sum.in_progress_tasks,
+    in_review_tasks: sum.in_review_tasks,
+    completion_percentage: sum.completion_percentage / 100
+  }).getCell('completion_percentage').numFmt = '0.00%';
+
+  if (data.employees) {
+    for (const emp of data.employees) {
+      empSheet.addRow({
+        employee_id: emp.employee_code,
+        employee_name: emp.name,
+        department: dept.name,
+        role: emp.role.toUpperCase(),
+        designation: emp.designation,
+        total_tasks: emp.summary.total_tasks,
+        completed: emp.summary.completed_tasks,
+        pending: emp.summary.pending_tasks,
+        in_progress: emp.summary.in_progress_tasks,
+        in_review: emp.summary.in_review_tasks,
+        completion_percentage: emp.summary.completion_percentage / 100
+      }).getCell('completion_percentage').numFmt = '0.00%';
+
+      if (emp.tasks) {
+        for (const t of emp.tasks) {
+          taskSheet.addRow({
+            department: dept.name,
+            employee_id: emp.employee_code,
+            employee_name: emp.name,
+            task_code: t.task_code,
+            title: t.title,
+            description: t.description || '',
+            priority: t.priority.toUpperCase(),
+            status: t.status.replace(/_/g, ' ').toUpperCase(),
+            assigned_by: t.assigned_by || '',
+            assigned_date: t.assigned_date ? new Date(t.assigned_date) : null,
+            start_date: t.start_date ? new Date(t.start_date) : null,
+            due_date: t.due_date ? new Date(t.due_date) : null,
+            completed_date: t.completed_date ? new Date(t.completed_date) : null
+          });
+        }
+      }
+    }
+  }
+};
+
+const generateDepartmentExcel = async (res, data) => {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Aspire';
+  const sheets = _setupExcelSheets(workbook);
+  
+  _populateExcelData(sheets, data);
+
+  await workbook.xlsx.write(res);
+  res.end();
+};
+
+const generateAllDepartmentsExcel = async (res, allData) => {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Aspire';
+  const sheets = _setupExcelSheets(workbook);
+
+  for (const deptData of allData) {
+    _populateExcelData(sheets, deptData);
+  }
+
+  await workbook.xlsx.write(res);
+  res.end();
+};
+
 module.exports = {
-  generateReportExcel
+  generateReportExcel,
+  generateDepartmentExcel,
+  generateAllDepartmentsExcel
 };

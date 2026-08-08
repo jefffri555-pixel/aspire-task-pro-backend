@@ -7,8 +7,8 @@ const ExcelJS = require('exceljs');
  */
 const generateUsersExcel = async (res, users) => {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Aspire Task Pro';
-  workbook.lastModifiedBy = 'Aspire Task Pro';
+  workbook.creator = 'Aspire';
+  workbook.lastModifiedBy = 'Aspire';
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet('System Users');

@@ -96,7 +96,7 @@ const createUser = async (req, res) => {
     return res.status(400).json({ error: 'Name, email, phone, role, and designation are required fields' });
   }
 
-  const validRoles = ['admin', 'manager', 'team_leader', 'staff'];
+  const validRoles = ['admin', 'manager', 'managing_director', 'team_leader', 'staff'];
   if (!validRoles.includes(role)) {
     return res.status(400).json({ error: 'Invalid role specified' });
   }
@@ -135,10 +135,53 @@ const createUser = async (req, res) => {
   }
 
   try {
-    // Generate sequential Employee ID
-    const countRes = await db.query('SELECT COUNT(*) FROM users');
-    const nextNum = parseInt(countRes.rows[0].count) + 1001;
-    const employee_id = `EMP-${nextNum}`;
+    if (department_id) {
+      const deptRes = await db.query('SELECT id, name, is_active FROM departments WHERE id = $1', [department_id]);
+      if (deptRes.rows.length === 0) {
+        return res.status(400).json({ error: 'Selected department does not exist.' });
+      }
+      if (!deptRes.rows[0].is_active) {
+        return res.status(400).json({ error: 'Selected department is inactive.' });
+      }
+    }
+    let employee_id = req.body.employee_id;
+
+    if (!employee_id) {
+      // Generate sequential Employee ID
+      const countRes = await db.query(`
+        SELECT
+          COALESCE(
+            MAX(
+              CAST(
+                REGEXP_REPLACE(employee_id, '[^0-9]', '', 'g')
+                AS INTEGER
+              )
+            ),
+            1000
+          ) + 1 AS next_number
+        FROM users
+        WHERE employee_id LIKE 'EMP-%'
+      `);
+      employee_id = `EMP-${countRes.rows[0].next_number}`;
+    } else {
+      // Check duplicate
+      const existingEmployee = await db.query(
+        `
+        SELECT id
+        FROM users
+        WHERE employee_id = $1
+        LIMIT 1
+        `,
+        [employee_id]
+      );
+
+      if (existingEmployee.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Employee ID already exists. Please use a different Employee ID.'
+        });
+      }
+    }
 
     // Hash Password
     const salt = await bcrypt.genSalt(10);
@@ -167,7 +210,14 @@ const createUser = async (req, res) => {
     return res.status(201).json(createdUser);
   } catch (err) {
     console.error('Admin Create User Error:', err);
+
     if (err.code === '23505') {
+      if (err.constraint === 'users_employee_id_key') {
+        return res.status(409).json({
+          success: false,
+          message: 'Employee ID already exists. Please use a different Employee ID.'
+        });
+      }
       return res.status(400).json({ error: 'A user with this email or phone number already exists' });
     }
     return res.status(500).json({ error: 'Internal server error creating user account' });
@@ -624,7 +674,7 @@ const exportUsersPDF = async (req, res) => {
 const getSettings = async (req, res) => {
   if (isDbOffline()) {
     return res.json({
-      company_name: 'Aspire Holidays (Mock)',
+      company_name: 'Aspire (Mock)',
       company_logo: '/uploads/logo_default.png',
       working_hours_start: '09:00',
       working_hours_end: '18:00',
@@ -722,7 +772,7 @@ const triggerBackup = async (req, res) => {
     const backupFileName = `backup_${timestamp}.sql`;
     const backupFilePath = path.join(backupDir, backupFileName);
 
-    let sqlContent = '-- Aspire Task Pro Database Backup\n';
+    let sqlContent = '-- Aspire Database Backup\n';
     sqlContent += `-- Generated on ${new Date().toISOString()}\n\n`;
 
     if (isDbOffline()) {

@@ -65,7 +65,44 @@ const uploadAttachment = async (fileMulter) => {
   }
 };
 
+const uploadAudio = async (fileMulter) => {
+  if (cloudinaryInstance) {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinaryInstance.uploader.upload_stream(
+        { folder: 'aspire_task_pro_voice', resource_type: 'video' },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve({
+            url: result.secure_url,
+            public_id: result.public_id
+          });
+        }
+      );
+      uploadStream.end(fileMulter.buffer);
+    });
+  } else {
+    // Return mock URL for local testing and save it locally
+    const fs = require('fs');
+    const path = require('path');
+    const simulatedFileName = `${Date.now()}-${fileMulter.originalname.replace(/\s+/g, '_')}`;
+    try {
+      const uploadDir = path.join(__dirname, '../uploads/voice');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadDir, simulatedFileName), fileMulter.buffer);
+    } catch (e) {
+      console.error('Error saving local mock voice upload:', e);
+    }
+    return {
+      url: `/uploads/voice/${simulatedFileName}`,
+      public_id: `mock_voice_id_${Date.now()}`
+    };
+  }
+};
+
 module.exports = {
   cloudinary: cloudinaryInstance,
-  uploadAttachment
+  uploadAttachment,
+  uploadAudio
 };

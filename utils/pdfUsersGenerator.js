@@ -21,7 +21,7 @@ const generateUsersPDF = (res, users) => {
   // 1. Header Section
   doc.fillColor('#082340')
      .fontSize(22)
-     .text('ASPIRE HOLIDAYS', { align: 'center', bold: true })
+     .text('ASPIRE', { align: 'center', bold: true })
      .fontSize(14)
      .text('Users Directory & Contact Ledger', { align: 'center' })
      .moveDown();
@@ -86,7 +86,7 @@ const generateUsersPDF = (res, users) => {
     doc.switchToPage(i);
     doc.fontSize(8)
        .fillColor('#94A3B8')
-       .text('Confidential - Aspire Holidays User Management Directory', 50, 780, { align: 'center' });
+       .text('Confidential - Aspire User Management Directory', 50, 780, { align: 'center' });
   }
 
   doc.end();

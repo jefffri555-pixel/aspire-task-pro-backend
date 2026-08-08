@@ -14,9 +14,9 @@ const generateReportPDF = (res, data) => {
   // 1. Header Section
   doc.fillColor('#082340')
      .fontSize(22)
-     .text('ASPIRE HOLIDAYS', { align: 'center', bold: true })
+     .text('ASPIRE', { align: 'center', bold: true })
      .fontSize(14)
-     .text('Aspire Task Pro - Productivity Report', { align: 'center' })
+     .text('Aspire - Productivity Report', { align: 'center' })
      .moveDown();
 
   doc.strokeColor('#0D6EFD')
@@ -204,12 +204,165 @@ const generateReportPDF = (res, data) => {
     doc.switchToPage(i);
     doc.fontSize(8)
        .fillColor('#94A3B8')
-       .text('Confidential - Aspire Holidays Internal Workflow Application', 50, 780, { align: 'center' });
+       .text('Confidential - Aspire Internal Workflow Application', 50, 780, { align: 'center' });
+  }
+
+  doc.end();
+};
+
+const _renderDepartmentPDFSection = (doc, data, isFirstSection = true) => {
+  if (!isFirstSection) {
+    doc.addPage();
+  }
+
+  const dept = data.department;
+  const summary = data.summary;
+
+  doc.fillColor('#082340')
+     .fontSize(22)
+     .text('ASPIRE', { align: 'center', bold: true })
+     .fontSize(14)
+     .text('Department Performance Report', { align: 'center' })
+     .moveDown();
+
+  doc.strokeColor('#0D6EFD')
+     .lineWidth(2)
+     .moveTo(50, doc.y)
+     .lineTo(545, doc.y)
+     .stroke()
+     .moveDown(1.5);
+
+  doc.fillColor('#333333')
+     .fontSize(10)
+     .text(`Selected Scope: ${dept.name}`)
+     .text(`Generated On: ${new Date().toLocaleString()}`)
+     .moveDown();
+
+  doc.fillColor('#082340').fontSize(14).text('Overall Summary', { bold: true }).moveDown(0.5);
+  doc.fillColor('#333333').fontSize(10)
+     .text(`Total Employees: ${summary.employee_count}`)
+     .text(`Total Tasks: ${summary.total_tasks}`)
+     .text(`Completed: ${summary.completed_tasks}`)
+     .text(`Pending: ${summary.pending_tasks}`)
+     .text(`In Progress: ${summary.in_progress_tasks}`)
+     .text(`In Review: ${summary.in_review_tasks}`)
+     .text(`Overall Completion Percentage: ${summary.completion_percentage}%`)
+     .moveDown(1.5);
+
+  if (!data.employees || data.employees.length === 0) {
+    doc.text('No employees found in this department.');
+    return;
+  }
+
+  for (const emp of data.employees) {
+    if (doc.y > 650) doc.addPage();
+    
+    doc.fillColor('#082340').fontSize(12).text(`Employee Name: ${emp.name}`, { bold: true })
+       .fillColor('#333333').fontSize(10)
+       .text(`Employee ID: ${emp.employee_code}`)
+       .text(`Designation: ${emp.designation}`)
+       .moveDown(0.5);
+
+    doc.fillColor('#082340').text('Employee Summary:')
+       .fillColor('#333333')
+       .text(`- Total Tasks: ${emp.summary.total_tasks}`)
+       .text(`- Completed: ${emp.summary.completed_tasks}`)
+       .text(`- Pending: ${emp.summary.pending_tasks}`)
+       .text(`- In Progress: ${emp.summary.in_progress_tasks}`)
+       .text(`- In Review: ${emp.summary.in_review_tasks}`)
+       .text(`- Completion Rate: ${emp.summary.completion_percentage}%`)
+       .moveDown(0.5);
+
+    if (emp.tasks.length === 0) continue;
+
+    const tableTop = doc.y;
+    doc.fillColor('#082340').fontSize(9).bold();
+    doc.text('Task ID', 50, tableTop, { width: 60 });
+    doc.text('Task Title', 110, tableTop, { width: 140 });
+    doc.text('Priority', 250, tableTop, { width: 50 });
+    doc.text('Status', 300, tableTop, { width: 60 });
+    doc.text('Assigned', 360, tableTop, { width: 60 });
+    doc.text('Due Date', 420, tableTop, { width: 60 });
+    doc.text('Completed', 480, tableTop, { width: 65 });
+    
+    doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(50, tableTop + 15).lineTo(545, tableTop + 15).stroke();
+    let nextY = tableTop + 22;
+    doc.fillColor('#333333').font('Helvetica');
+
+    for (const t of emp.tasks) {
+      if (nextY > 750) {
+        doc.addPage();
+        nextY = 50;
+        doc.fillColor('#082340').fontSize(9).bold();
+        doc.text('Task ID', 50, nextY, { width: 60 });
+        doc.text('Task Title', 110, nextY, { width: 140 });
+        doc.text('Priority', 250, nextY, { width: 50 });
+        doc.text('Status', 300, nextY, { width: 60 });
+        doc.text('Assigned', 360, nextY, { width: 60 });
+        doc.text('Due Date', 420, nextY, { width: 60 });
+        doc.text('Completed', 480, nextY, { width: 65 });
+        doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(50, nextY + 15).lineTo(545, nextY + 15).stroke();
+        nextY += 22;
+        doc.fillColor('#333333').font('Helvetica');
+      }
+
+      doc.text(t.task_code, 50, nextY, { width: 60 });
+      doc.text(t.title, 110, nextY, { width: 140, ellipsis: true });
+      doc.text(t.priority, 250, nextY, { width: 50 });
+      
+      let displayStatus = t.status.replace(/_/g, ' ');
+      displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+      
+      doc.text(displayStatus, 300, nextY, { width: 60 });
+      doc.text(t.assigned_date ? new Date(t.assigned_date).toLocaleDateString() : 'N/A', 360, nextY, { width: 60 });
+      doc.text(t.due_date ? new Date(t.due_date).toLocaleDateString() : 'N/A', 420, nextY, { width: 60 });
+      doc.text(t.completed_date ? new Date(t.completed_date).toLocaleDateString() : 'Not Available', 480, nextY, { width: 65 });
+      nextY += 18;
+    }
+    doc.y = nextY + 15;
+  }
+};
+
+const generateDepartmentPDF = (res, data) => {
+  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+  doc.pipe(res);
+  
+  _renderDepartmentPDFSection(doc, data, true);
+
+  const pageCount = doc.bufferedPageRange().count;
+  for (let i = 0; i < pageCount; i++) {
+    doc.switchToPage(i);
+    doc.fontSize(8)
+       .fillColor('#94A3B8')
+       .text('Confidential - Aspire Internal Workflow Application', 50, 780, { align: 'center' });
+  }
+
+  doc.end();
+};
+
+const generateAllDepartmentsPDF = (res, allData) => {
+  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+  doc.pipe(res);
+
+  let isFirst = true;
+  for (const deptData of allData) {
+    _renderDepartmentPDFSection(doc, deptData, isFirst);
+    isFirst = false;
+  }
+
+  const pageCount = doc.bufferedPageRange().count;
+  for (let i = 0; i < pageCount; i++) {
+    doc.switchToPage(i);
+    doc.fontSize(8)
+       .fillColor('#94A3B8')
+       .text('Confidential - Aspire Internal Workflow Application', 50, 780, { align: 'center' });
   }
 
   doc.end();
 };
 
 module.exports = {
-  generateReportPDF
+  generateReportPDF,
+  generateDepartmentPDF,
+  generateAllDepartmentsPDF
 };

@@ -8,7 +8,8 @@ const db = require('../config/database');
  * - Staff: Can see their own profile and list team leaders / managers
  */
 const getUsers = async (req, res) => {
-  const { role, id, department_id } = req.user;
+  const { role, id, department_id: userDeptId } = req.user;
+  const filterDeptId = req.query.department_id;
 
   try {
     let query = `
@@ -22,14 +23,24 @@ const getUsers = async (req, res) => {
       LEFT JOIN users tl ON u.team_leader_id = tl.id
     `;
     const params = [];
+    let whereClauses = [];
 
     if (role === 'team_leader') {
-      query += ` WHERE u.team_leader_id = $1 OR u.reporting_manager_id = $1 OR u.id = $1 OR u.department_id = $2`;
-      params.push(id, department_id);
+      params.push(id, userDeptId);
+      whereClauses.push(`(u.team_leader_id = $1 OR u.reporting_manager_id = $1 OR u.id = $1 OR u.department_id = $2)`);
     } else if (role === 'staff') {
       // Staff see themselves, or a public directory of TLs / Managers they report to
-      query += ` WHERE u.id = $1 OR u.role IN ('manager', 'team_leader')`;
       params.push(id);
+      whereClauses.push(`(u.id = $1 OR u.role IN ('manager', 'team_leader'))`);
+    }
+
+    if (filterDeptId) {
+      params.push(filterDeptId);
+      whereClauses.push(`u.department_id = $${params.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+      query += ` WHERE ` + whereClauses.join(' AND ');
     }
 
     query += ` ORDER BY u.name ASC`;
