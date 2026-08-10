@@ -39,7 +39,7 @@ const runMigration = async () => {
 
     // 3. Seed some mock data if empty
     console.log('Checking and seeding attendance & leave records...');
-    
+
     // Get seeded users to link against
     const usersRes = await db.query("SELECT id, name FROM users WHERE role = 'staff' LIMIT 2");
     if (usersRes.rows.length > 0) {
@@ -54,6 +54,7 @@ const runMigration = async () => {
           INSERT INTO attendance (user_id, date, status, check_in_time, check_out_time) VALUES
           ($1, CURRENT_DATE, 'present', CURRENT_DATE + TIME '09:00:00', CURRENT_DATE + TIME '18:00:00'),
           ($2, CURRENT_DATE, 'present', CURRENT_DATE + TIME '09:15:00', NULL)
+          ON CONFLICT (user_id, date) DO NOTHING
         `, [staff1, staff2]);
       }
 
@@ -65,6 +66,7 @@ const runMigration = async () => {
           INSERT INTO leave_requests (user_id, leave_type, start_date, end_date, status, reason) VALUES
           ($1, 'sick', CURRENT_DATE + INTERVAL '1 day', CURRENT_DATE + INTERVAL '2 days', 'pending', 'Fever and cold. Need rest.'),
           ($2, 'casual', CURRENT_DATE - INTERVAL '5 days', CURRENT_DATE - INTERVAL '4 days', 'approved', 'Family event.')
+        
         `, [staff1, staff2]);
       }
     }
