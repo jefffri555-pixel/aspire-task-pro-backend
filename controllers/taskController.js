@@ -492,14 +492,14 @@ const deleteTask = async (req, res) => {
   try {
     const checkRes = await db.query('SELECT title FROM tasks WHERE id = $1', [id]);
     if (checkRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
     await db.query('DELETE FROM tasks WHERE id = $1', [id]);
-    return res.json({ message: `Successfully deleted task: "${checkRes.rows[0].title}"` });
+    return res.json({ success: true, message: 'Task deleted successfully' });
   } catch (err) {
     console.error('Delete Task Error:', err);
-    return res.status(500).json({ error: 'Internal server error deleting task' });
+    return res.status(500).json({ success: false, message: 'Internal server error deleting task' });
   }
 };
 

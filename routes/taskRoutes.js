@@ -27,8 +27,8 @@ router.post(
 // Update status/progress/details
 router.put('/:id', taskController.updateTask);
 
-// Delete task restricted to Managers
-router.delete('/:id', authorizeRoles(['manager', 'managing_director']), taskController.deleteTask);
+// Delete task restricted to Admin and Manager
+router.delete('/:id', authorizeRoles(['admin', 'manager']), taskController.deleteTask);
 
 // Lifecycle actions (Manager/TL only)
 router.patch('/:id/assign', authorizeRoles(['manager', 'managing_director', 'team_leader']), taskController.assignTask);
