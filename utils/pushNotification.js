@@ -2,24 +2,40 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 
-let firebaseAdmin = null;
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './config/firebase-service-account.json';
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
+
+let firebaseMessaging = null;
+
+const serviceAccountPath =
+  process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+  './config/firebase-service-account.json';
 
 try {
   const resolvedPath = path.resolve(serviceAccountPath);
+
   if (fs.existsSync(resolvedPath)) {
-    const admin = require('firebase-admin');
     const serviceAccount = require(resolvedPath);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+
+    initializeApp({
+      credential: cert(serviceAccount),
     });
-    firebaseAdmin = admin;
-    console.log('Firebase Cloud Messaging (FCM) initialized successfully.');
+
+    firebaseMessaging = getMessaging();
+
+    console.log(
+      'Firebase Cloud Messaging (FCM) initialized successfully.'
+    );
   } else {
-    console.warn(`FCM Configuration missing at ${resolvedPath}. Push notifications will be simulated in console.`);
+    console.warn(
+      `FCM Configuration missing at ${resolvedPath}. Push notifications will be simulated in console.`
+    );
   }
 } catch (err) {
-  console.warn('Could not initialize Firebase Admin SDK. Notifications will be logged in developer sandbox.', err.message);
+  console.warn(
+    'Could not initialize Firebase Admin SDK. Notifications will be logged in developer sandbox.',
+    err.message
+  );
 }
 
 /**
@@ -47,7 +63,7 @@ const sendPushNotification = async (userId, title, body, data = {}) => {
 
     const tokens = tokensRes.rows.map(r => r.token);
 
-    if (firebaseAdmin) {
+    if (firebaseMessaging) {
       // 3. Send using FCM
       const message = {
         notification: { title, body },
@@ -58,7 +74,7 @@ const sendPushNotification = async (userId, title, body, data = {}) => {
         tokens: tokens
       };
 
-      const response = await firebaseAdmin.messaging().sendEachForMulticast(message);
+      const response = await firebaseMessaging.sendEachForMulticast(message);
       console.log(`FCM multicasts sent. Success: ${response.successCount}, Failure: ${response.failureCount}`);
     }
   } catch (err) {

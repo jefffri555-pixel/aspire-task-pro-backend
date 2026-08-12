@@ -2,4 +2,5 @@ node_modules/
 .env
 uploads/
 backups/
-*.log
+*.logconfig/firebase-service-account.json
+/config/firebase-service-account.json

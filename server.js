@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const pushTokenRoutes = require('./routes/pushTokenRoutes');
 require('dotenv').config();
 
 const db = require('./config/database');
@@ -66,7 +67,7 @@ app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/leaves', require('./routes/leaveRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
-
+app.use('/api/push', pushTokenRoutes);
 
 // Root Health Check Route
 app.get('/health', (req, res) => {
