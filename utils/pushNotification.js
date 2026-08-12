@@ -7,16 +7,23 @@ const { getMessaging } = require('firebase-admin/messaging');
 
 let firebaseMessaging = null;
 
-const serviceAccountPath =
-  process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-  './config/firebase-service-account.json';
+let serviceAccount = null;
 
 try {
-  const resolvedPath = path.resolve(serviceAccountPath);
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } else {
+    const serviceAccountPath =
+      process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+      './config/firebase-service-account.json';
+    const resolvedPath = path.resolve(serviceAccountPath);
 
-  if (fs.existsSync(resolvedPath)) {
-    const serviceAccount = require(resolvedPath);
+    if (fs.existsSync(resolvedPath)) {
+      serviceAccount = require(resolvedPath);
+    }
+  }
 
+  if (serviceAccount) {
     initializeApp({
       credential: cert(serviceAccount),
     });
@@ -28,7 +35,7 @@ try {
     );
   } else {
     console.warn(
-      `FCM Configuration missing at ${resolvedPath}. Push notifications will be simulated in console.`
+      'FCM Configuration missing (neither env var nor local file found). Push notifications will be simulated in console.'
     );
   }
 } catch (err) {
