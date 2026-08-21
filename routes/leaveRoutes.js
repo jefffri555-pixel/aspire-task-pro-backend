@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const leaveController = require('../controllers/leaveController');
 const { authenticateJWT } = require('../middleware/authMiddleware');
-const { isAdmin } = require('../middleware/adminMiddleware');
+const leaveController = require('../controllers/leaveController');
 
+// All routes require authentication
 router.use(authenticateJWT);
 
-router.get('/', leaveController.getLeaves);
-router.post('/', leaveController.createLeaveRequest);
-router.put('/:id', isAdmin, leaveController.updateLeaveRequest);
+router.post('/', leaveController.createRequest);
+router.get('/', leaveController.getRequests);
+router.put('/:id/review', leaveController.reviewRequest);
 
 module.exports = router;

@@ -64,7 +64,9 @@ app.use('/api/leads', require('./routes/leadRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/departments', require('./routes/departmentRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/regularization', require('./routes/regularizationRoutes'));
 app.use('/api/leaves', require('./routes/leaveRoutes'));
+app.use('/api/holidays', require('./routes/holidayRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/push', pushTokenRoutes);
@@ -116,6 +118,10 @@ const startServer = async () => {
     }
     console.log(`Database connected successfully at: ${dbTest.rows[0].now}`);
 
+    // Initialize nightly attendance cron
+    const { initAttendanceCron } = require('./cron/attendanceCron');
+    initAttendanceCron();
+
     app.listen(PORT, () => {
       console.log(`====================================================`);
       console.log(` Aspire Task Pro Backend listening on port ${PORT}`);
@@ -128,6 +134,10 @@ const startServer = async () => {
     console.log('Ensure PostgreSQL is running and credentials in .env are correct.');
     console.log('Starting API server anyway to allow mock server operation...');
 
+    // In mock mode, we could still initialize the cron, but it skips if db is offline anyway
+    const { initAttendanceCron } = require('./cron/attendanceCron');
+    initAttendanceCron();
+
     app.listen(PORT, () => {
       console.log(`====================================================`);
       console.log(` Aspire Task Pro Backend running with database fallback`);
@@ -138,3 +148,4 @@ const startServer = async () => {
 };
 
 startServer();
+
