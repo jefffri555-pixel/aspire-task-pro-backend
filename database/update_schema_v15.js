@@ -1,14 +1,23 @@
 const { Client } = require('pg');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 
 async function runMigration() {
-  const client = new Client({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_DATABASE || 'aspire_task_pro',
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT || 5432,
-  });
+  const client = process.env.DATABASE_URL
+    ? new Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+      })
+    : new Client({
+        user: process.env.DB_USER || 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        database: process.env.DB_DATABASE || 'aspire_task_pro',
+        password: process.env.DB_PASSWORD || 'postgres',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        ssl:
+          process.env.NODE_ENV === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
+      });
 
   try {
     await client.connect();
