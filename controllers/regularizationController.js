@@ -176,12 +176,12 @@ exports.updateStatus = async (req, res) => {
     if (status === 'approved' || status === 'rejected') {
       const formattedDate = new Date(regReq.date).toLocaleDateString();
       sendPushNotification(regReq.user_id, 
-        \`Attendance Correction \${status === 'approved' ? 'Approved' : 'Rejected'}\`, 
-        \`Your attendance correction for \${formattedDate} has been \${status}.\`
+        `Attendance Correction ${status === 'approved' ? 'Approved' : 'Rejected'}`, 
+        `Your attendance correction for ${formattedDate} has been ${status}.`
       );
     }
 
-    res.json({ message: \`Request \${status} successfully\` });
+    res.json({ message: `Request ${status} successfully` });
   } catch (err) {
     console.error('Review Request Error:', err);
     res.status(500).json({ error: 'Internal server error' });

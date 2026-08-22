@@ -218,7 +218,7 @@ const reviewRequest = async (req, res) => {
     if (status === 'approved' || status === 'rejected') {
       const title = status === 'approved' ? 'Request Approved' : 'Request Rejected';
       const formattedDate = new Date(leaveReq.start_date).toLocaleDateString();
-      const body = \`Your \${leaveReq.leave_type} request for \${formattedDate} has been \${status}.\`;
+      const body = `Your ${leaveReq.leave_type} request for ${formattedDate} has been ${status}.`;
       sendPushNotification(leaveReq.user_id, title, body);
     }
 
@@ -238,11 +238,11 @@ const reviewRequest = async (req, res) => {
           VALUES ($1, $2, $3, $4)
           ON CONFLICT (user_id, date) DO UPDATE 
           SET status = $3, reason = $4
-        `, [leaveReq.user_id, dateStr, attStatus, \`Approved \${attStatus}\`]);
+        `, [leaveReq.user_id, dateStr, attStatus, `Approved ${attStatus}`]);
       }
     }
 
-    return res.json({ message: \`Request \${status} successfully\` });
+    return res.json({ message: `Request ${status} successfully` });
   } catch (err) {
     console.error('Review Request Error:', err);
     return res.status(500).json({ error: 'Internal server error reviewing request' });
