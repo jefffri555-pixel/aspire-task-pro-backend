@@ -63,9 +63,9 @@ const getAttendance = async (req, res) => {
  */
 const fetchAllSettings = async () => {
   const settings = {
-    shift_start_time: '09:30',
-    shift_end_time: '18:30',
-    grace_period_minutes: 15,
+    shift_start: '09:30',
+    shift_end: '18:30',
+    grace_period: 15,
     half_day_cutoff_time: '12:00',
     min_working_hours: 8,
     min_half_day_hours: 4,
@@ -73,14 +73,12 @@ const fetchAllSettings = async () => {
     auto_mark_absent: 'true',
     enable_punch_in: 'true',
     enable_punch_out: 'true',
-    require_punch_in_selfie: 'true',
-    require_punch_out_selfie: 'true',
-    require_punch_in_gps: 'true',
-    require_punch_out_gps: 'true',
-    office_name: 'Aspire HQ',
-    office_latitude: 37.4220,
-    office_longitude: -122.0841,
-    office_radius: 200,
+    require_selfie: 'true',
+    require_gps: 'true',
+    office_name: 'Main Office',
+    office_latitude: null,
+    office_longitude: null,
+    geofence_radius: 200,
     enable_punch_in_reminder: 'true',
     punch_in_reminder_time: '09:40',
     enable_late_check_in_notification: 'true',
@@ -97,9 +95,9 @@ const fetchAllSettings = async () => {
     const result = await db.query('SELECT key, value FROM system_settings WHERE key = ANY($1)', [keys]);
     
     result.rows.forEach(row => {
-      if (settings.hasOwnProperty(row.key) && row.value !== null) {
+      if (settings.hasOwnProperty(row.key) && row.value !== null && row.value !== '') {
         // Parse numerical values
-        if (['grace_period_minutes', 'min_working_hours', 'min_half_day_hours', 'office_latitude', 'office_longitude', 'office_radius'].includes(row.key)) {
+        if (['grace_period', 'min_working_hours', 'min_half_day_hours', 'office_latitude', 'office_longitude', 'geofence_radius'].includes(row.key)) {
           settings[row.key] = parseFloat(row.value);
         } else {
           settings[row.key] = row.value;
@@ -136,9 +134,9 @@ const _fetchAttendanceData = async (req) => {
   const role = req.user.role;
   const settings = await fetchAllSettings();
   
-  const shiftStartStr = settings.shift_start_time || '09:30';
+  const shiftStartStr = settings.shift_start || '09:30';
   const shiftStartParts = shiftStartStr.split(':');
-  const cutoffMinsLimit = parseInt(shiftStartParts[0]) * 60 + parseInt(shiftStartParts[1] || '0') + (settings.grace_period_minutes || 15);
+  const cutoffMinsLimit = parseInt(shiftStartParts[0]) * 60 + parseInt(shiftStartParts[1] || '0') + (settings.grace_period || 15);
 
   let query = `
     SELECT a.*, u.name as employee_name, u.employee_id, d.name as department_name,
@@ -666,9 +664,9 @@ const markAttendance = async (req, res) => {
       const cutoffHours = parseInt(cutoffTimeParts[0]);
       const cutoffMins = parseInt(cutoffTimeParts[1] || '0');
 
-      const shiftStartStr = settings.shift_start_time || '09:30';
+      const shiftStartStr = settings.shift_start || '09:30';
       const shiftStartParts = shiftStartStr.split(':');
-      const lateLimitMins = parseInt(shiftStartParts[0]) * 60 + parseInt(shiftStartParts[1] || '0') + (settings.grace_period_minutes || 15);
+      const lateLimitMins = parseInt(shiftStartParts[0]) * 60 + parseInt(shiftStartParts[1] || '0') + (settings.grace_period || 15);
       
       const nowMins = now.getHours() * 60 + now.getMinutes();
 

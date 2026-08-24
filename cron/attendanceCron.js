@@ -153,7 +153,7 @@ const initAttendanceCron = () => {
 
       // 3. Missed Punch Out Reminder
       // Wait, is there a specific setting for missed punch out time? The requirement says "Enable Missed Punch Out Reminder", but didn't specify "Missed Punch Out Reminder Time". Let's assume shift end + 30 mins.
-      const shiftEndStr = settings.shift_end_time || '18:30';
+      const shiftEndStr = settings.shift_end || '18:30';
       const shiftEndParts = shiftEndStr.split(':');
       let missedTime = new Date();
       missedTime.setHours(parseInt(shiftEndParts[0]), parseInt(shiftEndParts[1] || '0') + 30, 0, 0);
