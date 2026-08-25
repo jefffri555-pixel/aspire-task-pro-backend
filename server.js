@@ -118,6 +118,32 @@ const startServer = async () => {
     }
     console.log(`Database connected successfully at: ${dbTest.rows[0].now}`);
 
+    // --- Auto-Run V16 holidays migration for Render production ---
+    try {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS holidays (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          name VARCHAR(150) NOT NULL,
+          date DATE NOT NULL UNIQUE,
+          type VARCHAR(50) NOT NULL,
+          description TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      
+      await db.query(`
+        INSERT INTO system_settings (key, value)
+        VALUES 
+          ('weekly_off_days', '["Sunday"]'),
+          ('saturday_off_rule', 'No Saturday Off')
+        ON CONFLICT (key) DO NOTHING
+      `);
+      console.log('V16 holidays migration completed');
+    } catch (migrationErr) {
+      console.error('Warning: V16 holidays migration encountered an error:', migrationErr.message);
+    }
+    // -------------------------------------------------------------
+
     // Initialize nightly attendance cron
     const { initAttendanceCron } = require('./cron/attendanceCron');
     initAttendanceCron();
