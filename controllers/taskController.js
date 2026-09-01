@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { uploadAttachment, uploadAudio } = require('../config/cloudinary');
 const { sendPushNotification } = require('../utils/pushNotification');
+const { notifyLeadTrackingSystem } = require('../services/leadTrackingNotificationService');
 
 const isDbOffline = () => db.isConnectionFailed && db.isConnectionFailed();
 
@@ -302,6 +303,9 @@ const createTask = async (req, res) => {
     const newTask = result.rows[0];
 
     const taskLogTitle = newTask.title || 'Voice Task';
+    
+    // Trigger webhook asynchronously
+    notifyLeadTrackingSystem('TASK_ASSIGNED', newTask);
 
     await logTaskHistory(newTask.id, req.user.id, 'task_created', null, `Task created: ${taskLogTitle}`);
 
@@ -470,6 +474,16 @@ const updateTask = async (req, res) => {
       }
 
       await client.query('COMMIT');
+      
+      // Trigger Lead Tracking Webhook
+      if (task.status !== finalStatus && finalStatus === 'completed') {
+        notifyLeadTrackingSystem('TASK_COMPLETED', updatedTask);
+      } else if (task.status !== finalStatus) {
+        notifyLeadTrackingSystem('TASK_STATUS_CHANGED', updatedTask);
+      } else {
+        notifyLeadTrackingSystem('TASK_UPDATED', updatedTask);
+      }
+      
       return res.json(updatedTask);
     } catch (txnErr) {
       await client.query('ROLLBACK');
@@ -573,6 +587,9 @@ const assignTask = async (req, res) => {
 
     const assignAction = oldAssignee ? 'task_reassigned' : 'task_assigned';
     await logTaskHistory(taskId, assignedBy, assignAction, oldAssignee, assignedTo);
+    
+    // Trigger webhook for assignment
+    notifyLeadTrackingSystem('TASK_ASSIGNED', updatedTask);
 
     // Notify new assignee
     try {

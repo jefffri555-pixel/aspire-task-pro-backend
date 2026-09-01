@@ -147,6 +147,10 @@ const startServer = async () => {
     // Initialize nightly attendance cron
     const { initAttendanceCron } = require('./cron/attendanceCron');
     initAttendanceCron();
+    
+    // Initialize task cron
+    const { initTaskCron } = require('./cron/taskCron');
+    initTaskCron();
 
     app.listen(PORT, () => {
       console.log(`====================================================`);
@@ -163,6 +167,9 @@ const startServer = async () => {
     // In mock mode, we could still initialize the cron, but it skips if db is offline anyway
     const { initAttendanceCron } = require('./cron/attendanceCron');
     initAttendanceCron();
+    
+    const { initTaskCron } = require('./cron/taskCron');
+    initTaskCron();
 
     app.listen(PORT, () => {
       console.log(`====================================================`);
