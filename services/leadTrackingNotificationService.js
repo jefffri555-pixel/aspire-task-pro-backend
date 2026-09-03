@@ -9,16 +9,21 @@ const db = require('../config/database');
 const notifyLeadTrackingSystem = async (event, task) => {
   try {
     const webhookUrl = process.env.LEAD_TRACKING_WEBHOOK_URL;
-    const secret = process.env.TASK_SYNC_SECRET;
+    let secret = process.env.TASK_SYNC_SECRET;
+    if (secret && secret.startsWith('"') && secret.endsWith('"')) {
+      secret = secret.slice(1, -1);
+    }
 
     if (!webhookUrl || !secret) {
       console.warn('Lead tracking webhook configuration is missing. Skipping notification.');
       return;
     }
 
-    // Default to the assigned user, fallback to assigner if not assigned
-    const targetUserId = task.assigned_to || task.assigned_by;
-    
+    console.log('[TaskSync] Task assigned');
+    console.log(`[TaskSync] task_id: ${task.task_id || task.id}`);
+
+    // Fetch the assigned user's employee_id
+    const targetUserId = task.assigned_to;
     let employeeId = null;
     let assignedByName = 'System';
 
@@ -35,6 +40,9 @@ const notifyLeadTrackingSystem = async (event, task) => {
         assignedByName = assignerRes.rows[0].name;
       }
     }
+
+    console.log(`[TaskSync] employee_id: ${employeeId || 'UNKNOWN'}`);
+    console.log('[TaskSync] sending webhook...');
 
     const payload = {
       event: event,
@@ -57,13 +65,18 @@ const notifyLeadTrackingSystem = async (event, task) => {
         'x-task-sync-secret': secret
       },
       body: JSON.stringify(payload)
-    }).then(response => {
+    }).then(async response => {
+      console.log(`[TaskSync] response status: ${response.status}`);
       if (!response.ok) {
+        const text = await response.text();
+        console.log(`[TaskSync] failure reason: ${response.statusText} ${text}`);
         console.error(`Lead Tracking Webhook Error: ${response.status} ${response.statusText}`);
       } else {
+        console.log(`[TaskSync] success reason: Webhook accepted`);
         console.log(`Lead Tracking Webhook sent successfully for event: ${event}, task: ${payload.task_id}`);
       }
     }).catch(err => {
+      console.log(`[TaskSync] failure reason: ${err.message}`);
       console.error(`Lead Tracking Webhook Network Error:`, err.message);
     });
 
